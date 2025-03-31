@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html{
+    font-size: 11px;
+}
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    background-color: #e4e4e7;
+    color: #3f3f46;
+  }
+  .nunito- {
+    font-family: "Nunito", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .dataTables_wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+}
+
+
+#editAttendanceModal * {
+  pointer-events: auto !important;
+  user-select: auto !important;
+}
+
+
+#editDepartmentModal * {
+  pointer-events: auto !important;
+  user-select: auto !important;
+}
+
+
+
+#hierarchy-container {
+  transform-origin: center; /* Scale from the center */
+}
+
+.parent-container { /* Ensure the parent is scrollable */
+  width: 100%;
+  height: 100%;
+  overflow: scroll; /* Enable both horizontal and vertical scrolling */
+  position: relative;
+}
+#editAdvanceModal *{
+  pointer-events: auto !important;
+  user-select: auto !important;
+}
+
+.dataTables_wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+#attendance-table {
+  width: 100% !important;
+  table-layout: auto !important; /* Allow columns to size based on content */
+}
+
+#attendance-table thead,
+#attendance-table tbody
+ {
+  width: auto !important;
+  max-width: none !important;
+}
+
+#attendance-table tr,
+#attendance-table th,
+#attendance-table td {
+  max-width: none !important;
+}
+
+#attendance-table tr {
+  border-radius: 0.75rem /* 12px */;
+  
+}
+
+/* Ensure columns can expand/contract based on content */
+#attendance-table th,
+#attendance-table td {
+  white-space: nowrap; /* Prevent text wrapping */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Add ellipsis for overflow */
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  #attendance-table {
+      display: block;
+      overflow-x: auto;
+      width: 100% !important;
+  }
+}
+
+#attendance-table td.employee-column
+{
+  border-top-left-radius: 0.75rem /* 12px */;
+  border-bottom-left-radius: 0.75rem /* 12px */;
+}
+
+/* Ensure action column and document column have appropriate sizing */
+#attendance-table td.documents-column, /* Supporting Docs column */
+#attendance-table td.actions-column { /* Actions column */
+  width: auto !important;
+  min-width: 100px;
+}
+
+/* Improve readability of document links */
+#attendance-table td.documents-column ul {
+  max-width: 200px;
+  overflow: visible !important;
+  text-overflow: ellipsis;
+}
+
+/* Minimize actions column width */
+#attendance-table td.actions-column, 
+#attendance-table th.actions-column {
+    width: 50px !important; /* Very narrow width */
+    max-width: 50px !important;
+    overflow: visible !important;
+    min-width: 50px !important;
+    text-align: center;
+    
+
+    padding: 0 !important;
+}
+
+/* Style the dropdown trigger button */
+#attendance-table .dropdown-trigger {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+    padding: 0;
+    background: transparent;
+}
+
+/* Ensure the dropdown is positioned correctly */
+#attendance-table .relative {
+  overflow: visible !important;
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* Adjust dropdown menu positioning */
+#attendance-table .absolute {
+  overflow: visible !important;
+
+    right: -5px; /* Adjust if needed */
+    min-width: 100px;
+}
+
+.dataTables_filter {
+  display: none;
+}
+
+/* Style the container holding all months */
+.flatpickr-monthSelect-months {
+  display: grid; /* Use a grid layout for better alignment */
+  grid-template-columns: repeat(3, 1fr); /* 3 columns */
+  gap: 10px; /* Space between months */
+  padding: 10px;
+  background-color: #f8f9fa; /* Light background color */
+  border-radius: 8px; /* Rounded corners */
+}
+
+/* Style individual months */
+.flatpickr-monthSelect-month {
+  padding: 8px 12px;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  border: 1px solid #ccc; /* Light border */
+  border-radius: 5px;
+  background-color: #ffffff; /* White background */
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Hover effect */
+.flatpickr-monthSelect-month:hover {
+  background-color: #184E77; /* Change background on hover */
+  color: #ffffff; /* White text on hover */
+  border-color: #184E77; /* Darker border on hover */
+}
+
+/* Selected month */
+.flatpickr-monthSelect-month.selected {
+  background-color: #52B69A; /* Selected month background */
+  color: #ffffff; /* White text */
+  border-color: #52B69A; /* Border matches background */
+}
