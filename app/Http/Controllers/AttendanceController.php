@@ -86,7 +86,7 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
 
      // Ensure $data is always an array
      if (!is_array($data)) {
-        file_put_contents(storage_path('logs/attendance_payload_error.log'), now() . 'error - ' . json_encode($data, JSON_PRETTY_PRINT).'date format error end' . PHP_EOL, FILE_APPEND);
+        file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . 'error - ' . json_encode($data, JSON_PRETTY_PRINT).'date format error end' . PHP_EOL, FILE_APPEND);
 
          return response()->json(['error' => 'Invalid data format'], 400);
      }
@@ -100,7 +100,7 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
      foreach ($data as $entry) {
          // Validate required fields
          if (!isset($entry['EmpId']) || !isset($entry['AttTime'])) {
-            file_put_contents(storage_path('logs/attendance_payload_error.log'), now() . 'Missing required fields: EmpId or AttTime -' . json_encode($data, JSON_PRETTY_PRINT).'missing feilds error end' . PHP_EOL, FILE_APPEND);
+            file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . 'Missing required fields: EmpId or AttTime -' . json_encode($data, JSON_PRETTY_PRINT).'missing feilds error end' . PHP_EOL, FILE_APPEND);
 
              return response()->json(['error' => 'Missing required fields: EmpId or AttTime'], 400);
          }
@@ -112,7 +112,7 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
          // Ensure employee exists
          $employee = Employee::where('id', $employeeId)->first();
          if (!$employee) {
-            file_put_contents(storage_path('logs/attendance_payload_error.log'), now() . ' Employee ID {$employeeId} not found -' . json_encode($data, JSON_PRETTY_PRINT).'employee id error end' . PHP_EOL, FILE_APPEND);
+            file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . 'Employee ID not present -' . json_encode($data, JSON_PRETTY_PRINT).'missing employee ID error end' . PHP_EOL, FILE_APPEND);
 
 
            
@@ -172,7 +172,7 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
              ]);
          }
      }
-     file_put_contents(storage_path('logs/attendance_payload_success.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT).'request processed  end' . PHP_EOL, FILE_APPEND);
+     file_put_contents(storage_path('logs/success_attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT).'request successfully processed  end' . PHP_EOL, FILE_APPEND);
 
      return response()->json(['message' => 'Records processed successfully'], 201);
  }
