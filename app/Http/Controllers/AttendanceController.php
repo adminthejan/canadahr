@@ -81,7 +81,9 @@ class AttendanceController extends Controller
  {
      // Decode JSON input
      $data = $request->json()->all();
- 
+ // Log the received data to a file
+file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL, FILE_APPEND);
+
      // Ensure $data is always an array
      if (!is_array($data)) {
          return response()->json(['error' => 'Invalid data format'], 400);
