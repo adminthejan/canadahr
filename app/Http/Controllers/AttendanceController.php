@@ -82,10 +82,12 @@ class AttendanceController extends Controller
      // Decode JSON input
      $data = $request->json()->all();
  // Log the received data to a file
-file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL, FILE_APPEND);
+file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL, FILE_APPEND.'request received  end');
 
      // Ensure $data is always an array
      if (!is_array($data)) {
+        file_put_contents(storage_path('logs/attendance_payload_error.log'), now() . 'error - ' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL, FILE_APPEND.'daat format error end');
+
          return response()->json(['error' => 'Invalid data format'], 400);
      }
  
@@ -98,6 +100,8 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
      foreach ($data as $entry) {
          // Validate required fields
          if (!isset($entry['EmpId']) || !isset($entry['AttTime'])) {
+            file_put_contents(storage_path('logs/attendance_payload_error.log'), now() . 'Missing required fields: EmpId or AttTime -' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL, FILE_APPEND.'missing feilds error end');
+
              return response()->json(['error' => 'Missing required fields: EmpId or AttTime'], 400);
          }
  
@@ -108,6 +112,10 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
          // Ensure employee exists
          $employee = Employee::where('id', $employeeId)->first();
          if (!$employee) {
+            file_put_contents(storage_path('logs/attendance_payload_error.log'), now() . ' Employee ID {$employeeId} not found -' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL, FILE_APPEND.'employee id error end');
+
+
+           
              return response()->json(['error' => "Employee ID {$employeeId} not found"], 404);
          }
  
@@ -116,9 +124,9 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
  
          // Convert to Carbon objects
          $attTimeCarbon = Carbon::parse($attFullData); // Marked attendance time
-         $lateThreshold = Carbon::createFromTime(9, 0, 0);
-         $overtimeThreshold = Carbon::createFromTime(18, 0, 0);
-         $workHoursThreshold = 32400; // Standard working hours
+         $lateThreshold = Carbon::createFromTime(8, 45, 0);
+         $overtimeThreshold = Carbon::createFromTime(16, 45, 0);
+         $workHoursThreshold = 8*3600; // Standard working hours
          // Check if attendance already exists for the day
          $attendanceRecord = Attendance::where('employee_id', $employeeId)
              ->where('date', $attDate)
@@ -146,7 +154,7 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
              $clockOutTimeCarbon = $attTimeCarbon; // Latest clock-out time
  
              // Calculate total work hours
-             $totalWorkHours = $clockInTimeCarbon->diffInSeconds($clockOutTimeCarbon); // In seconds
+             $totalWorkHours = $clockInTimeCarbon->diffInSeconds($clockOutTimeCarbon); // Convert to hours
 
              // Calculate overtime only if total work hours exceed 8
              $overtimeSeconds = 0;
@@ -164,7 +172,8 @@ file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . j
              ]);
          }
      }
- 
+     file_put_contents(storage_path('logs/attendance_payload_success.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL, FILE_APPEND.'request processed  end');
+
      return response()->json(['message' => 'Records processed successfully'], 201);
  }
 
