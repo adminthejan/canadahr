@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\Leave;
 use Illuminate\Http\Request;
 
 use Carbon\Carbon;
@@ -77,105 +78,127 @@ class AttendanceController extends Controller
 }
  */
 
- public function store(Request $request)
- {
-     // Decode JSON input
-     $data = $request->json()->all();
- // Log the received data to a file
-file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT).'request received  end' . PHP_EOL, FILE_APPEND);
+public function store(Request $request)
+{
+    $data = $request->json()->all();
 
-     // Ensure $data is always an array
-     if (!is_array($data)) {
-        file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . 'error - ' . json_encode($data, JSON_PRETTY_PRINT).'date format error end' . PHP_EOL, FILE_APPEND);
+    file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT).' request received end' . PHP_EOL, FILE_APPEND);
 
-         return response()->json(['error' => 'Invalid data format'], 400);
-     }
- 
-     // If $data is a single object, wrap it in an array
-     if (isset($data['EmpId'])) {
-         $data = [$data];
-     }
- 
-     // Process each record
-     foreach ($data as $entry) {
-         // Validate required fields
-         if (!isset($entry['EmpId']) || !isset($entry['AttTime'])) {
-            file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . 'Missing required fields: EmpId or AttTime -' . json_encode($data, JSON_PRETTY_PRINT).'missing feilds error end' . PHP_EOL, FILE_APPEND);
+    if (!is_array($data)) {
+        file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . ' error - Invalid format: ' . json_encode($data, JSON_PRETTY_PRINT) . ' date format error end' . PHP_EOL, FILE_APPEND);
+        return response()->json(['error' => 'Invalid data format'], 400);
+    }
 
-             return response()->json(['error' => 'Missing required fields: EmpId or AttTime'], 400);
-         }
- 
-         // Extract fields
-         $employeeId = $entry['EmpId'];
-         $attFullData = $entry['AttTime'];
- 
-         // Ensure employee exists
-         $employee = Employee::where('id', $employeeId)->first();
-         if (!$employee) {
-            file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . 'Employee ID not present -' . json_encode($data, JSON_PRETTY_PRINT).'missing employee ID error end' . PHP_EOL, FILE_APPEND);
+    if (isset($data['EmpId'])) {
+        $data = [$data];
+    }
+
+    foreach ($data as $entry) {
+        if (!isset($entry['EmpId']) || !isset($entry['AttTime'])) {
+            file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . ' Missing fields: ' . json_encode($data, JSON_PRETTY_PRINT) . ' missing fields error end' . PHP_EOL, FILE_APPEND);
+            return response()->json(['error' => 'Missing required fields: EmpId or AttTime'], 400);
+        }
+
+        $employeeId = $entry['EmpId'];
+        $attTime = $entry['AttTime'];
+
+        $employee = Employee::find($employeeId);
+        if (!$employee) {
+            file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . ' Employee not found: ' . json_encode($data, JSON_PRETTY_PRINT) . ' missing employee ID error end' . PHP_EOL, FILE_APPEND);
+            return response()->json(['error' => "Employee ID {$employeeId} not found"], 404);
+        }
+
+        [$attDate, $attClockTime] = explode(' ', $attTime);
+        $attTimeCarbon = Carbon::parse($attTime);
+
+        $attendance = Attendance::where('employee_id', $employeeId)
+            ->where('date', $attDate)
+            ->first();
+
+        if (!$attendance) {
+            // First punch – treat as clock-in
+            $lateThreshold = Carbon::parse($attDate . ' 08:45:00');
+            $leaveThreshold = Carbon::parse($attDate . ' 09:15:00');
+
+            $lateBySeconds = $attTimeCarbon->greaterThan($lateThreshold)
+                ? $attTimeCarbon->diffInSeconds($lateThreshold)
+                : 0;
+
+            // Add leave if after 9:15
+            if ($attTimeCarbon->greaterThan($leaveThreshold)) {
+                $existingLeave = Leave::where('employee_id', $employee->id)
+                    ->where('leave_type', 'late')
+                    ->whereDate('start_date', $attDate)
+                    ->first();
+
+                if (!$existingLeave) {
+                    Leave::create([
+                        'employee_id' => $employee->id,
+                        'employee_name' => $employee->full_name,
+                        'employment_ID' => $employee->employee_id,
+                        'leave_type' => 'late',
+                        'approved_person' => 'System Auto',
+                        'start_date' => $attDate,
+                        'end_date' => $attDate,
+                        'duration' => 1,
+                        'status' => 'approved',
+                        'description' => 'Auto-marked late for arriving after 9:15 AM',
+                        'supporting_documents' => null,
+                    ]);
+                }
+            }
+
+            Attendance::create([
+                'employee_id' => $employeeId,
+                'date' => $attDate,
+                'clock_in_time' => $attClockTime,
+                'clock_out_time' => null,
+                'status' => 'present',
+                'total_work_hours' => null,
+                'overtime_seconds' => null,
+                'late_by_seconds' => $lateBySeconds,
+            ]);
+        } else {
+            // Clock-out logic
+            $clockIn = Carbon::parse($attendance->date . ' ' . $attendance->clock_in_time);
+            $clockOut = $attTimeCarbon->copy();
+
+            if ($clockOut->lessThan($clockIn)) {
+                $clockOut->addDay(); // Adjust for next day clock out
+            }
+
+            $eightThirty = Carbon::parse($attendance->date . ' 08:30:00');
+            $tenAM = Carbon::parse($attendance->date . ' 10:00:00');
+            $lateThreshold = Carbon::parse($attendance->date . ' 08:45:00');
+
+            if ($clockIn->greaterThanOrEqualTo($tenAM)) {
+                $workStart = $clockIn->copy();
+                $otThreshold = 4 * 3600;
+            } else {
+                $workStart = $clockIn->lessThan($eightThirty) ? $eightThirty->copy() : $clockIn->copy();
+                $otThreshold = 8 * 3600;
+            }
+
+            $totalWorkSeconds = $workStart->diffInSeconds($clockOut);
+            $overtimeSeconds = $totalWorkSeconds > $otThreshold ? $totalWorkSeconds - $otThreshold : 0;
+            $lateBySeconds = $clockIn->greaterThan($lateThreshold) ? $clockIn->diffInSeconds($lateThreshold) : 0;
+
+            $attendance->update([
+                'clock_out_time' => $clockOut->format('H:i:s'),
+                'status' => 'present',
+                'total_work_hours' => $totalWorkSeconds,
+                'overtime_seconds' => $overtimeSeconds,
+                'late_by_seconds' => $lateBySeconds,
+            ]);
+        }
+    }
+
+    file_put_contents(storage_path('logs/success_attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT) . ' request successfully processed end' . PHP_EOL, FILE_APPEND);
+
+    return response()->json(['message' => 'Records processed successfully'], 201);
+}
 
 
-           
-             return response()->json(['error' => "Employee ID {$employeeId} not found"], 404);
-         }
- 
-         // Split AttFullData into date and time
-         [$attDate, $attTime] = explode(" ", $attFullData);
- 
-         // Convert to Carbon objects
-         $attTimeCarbon = Carbon::parse($attFullData); // Marked attendance time
-         $lateThreshold = Carbon::createFromTime(8, 45, 0);
-         $overtimeThreshold = Carbon::createFromTime(16, 45, 0);
-         $workHoursThreshold = 8*3600; // Standard working hours
-         // Check if attendance already exists for the day
-         $attendanceRecord = Attendance::where('employee_id', $employeeId)
-             ->where('date', $attDate)
-             ->first();
- 
-         if (!$attendanceRecord) {
-             // First entry of the day - set as clock-in
-             $lateBySeconds = $attTimeCarbon->greaterThan($lateThreshold)
-                 ? $attTimeCarbon->diffInSeconds($lateThreshold)
-                 : 0;
- 
-             Attendance::create([
-                 'employee_id' => $employeeId,
-                 'date' => $attDate,
-                 'clock_in_time' => $attTime,
-                 'clock_out_time' => null,
-                 'status' => 1,
-                 'total_work_hours' => null,
-                 'overtime_seconds' => null,
-                 'late_by_seconds' => $lateBySeconds,
-             ]);
-         } else {
-             // Update clock-out time with the latest timestamp
-             $clockInTimeCarbon = Carbon::parse($attendanceRecord->clock_in_time);
-             $clockOutTimeCarbon = $attTimeCarbon; // Latest clock-out time
- 
-             // Calculate total work hours
-             $totalWorkHours = $clockInTimeCarbon->diffInSeconds($clockOutTimeCarbon); // Convert to hours
-
-             // Calculate overtime only if total work hours exceed 8
-             $overtimeSeconds = 0;
-             if ($totalWorkHours > $workHoursThreshold) {
-                 $overtimeSeconds = ($totalWorkHours - $workHoursThreshold); // Convert excess hours to seconds
-             }
- 
- 
-             // Update existing record
-             $attendanceRecord->update([
-                 'clock_out_time' => $attTime,
-                 'status' => 1,
-                 'total_work_hours' => $totalWorkHours, // No rounding off
-                 'overtime_seconds' => $overtimeSeconds,
-             ]);
-         }
-     }
-     file_put_contents(storage_path('logs/success_attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT).'request successfully processed  end' . PHP_EOL, FILE_APPEND);
-
-     return response()->json(['message' => 'Records processed successfully'], 201);
- }
 
  public function update(Request $request, $id)
  {
