@@ -3,514 +3,587 @@
 @section('title', 'Add New Employee')
 
 @section('content')
-<div class="flex flex-col items-start justify-start w-full px-16">
-    
+
 @if(session('success'))
 <script>
-     
-    document.addEventListener("DOMContentLoaded", () => {
-        showNotification("{{ session('success') }}");
-    });
-
+    document.addEventListener("DOMContentLoaded", () => { showNotification("{{ session('success') }}"); });
     async function showNotification(message) {
         const notification = document.getElementById('notification');
         const notificationMessage = document.getElementById('notification-message');
-
-        // Set the message
         notificationMessage.textContent = message;
-
-        // Slide the notification down
         setTimeout(() => {
-        // Slide the notification down
-        notification.style.top = '20px';
-
-        // Hide the notification after an additional 3 seconds
-        setTimeout(() => {
-            notification.style.top = '-100px';
-        }, 3000);
-        }, 5000);
-
-        // Optionally send the message to the backend
+            notification.style.top = '20px';
+            setTimeout(() => { notification.style.top = '-100px'; }, 3000);
+        }, 500);
         try {
-            const response = await fetch("{{ route('notify') }}", {
+            await fetch("{{ route('notify') }}", {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                 body: JSON.stringify({ message }),
             });
-
-            if (!response.ok) {
-                console.error('Failed to send notification:', response.statusText);
-            }
-        } catch (error) {
-            console.error('Error sending notification:', error);
-        }
+        } catch (error) { console.error('Error sending notification:', error); }
     }
-    </script>
-     @endif
-    @if($errors->any())
-        <div class="bg-red-100 text-red-800 p-3 rounded mb-4">
-            <ul>
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-    <nav class="flex px-5 py-3 mt-4 mb-4" aria-label="Breadcrumb">
-    <ol class="inline-flex items-center space-x-1 md:space-x-3">
-        <li class="inline-flex items-center">
-        <a href="#" class="inline-flex items-center text-3xl font-medium text-[#00000080] hover:text-blue-600">
-            Employee
-        </a>
-        </li>
-        <li>
-        <div class="flex items-center">
-            <p class="text-[#00000080] text-3xl"><i class="ri-arrow-right-wide-line"></i></p>
-            <a href="#" class="ml-1 font-medium text-[#00000080] text-3xl hover:text-blue-600">Employee Management</a>
-        </div>
-        </li>
-    </ol>
-    </nav>
-<div>
+</script>
+@endif
 
-    <form method="POST" action="{{ route('employees.store') }}" enctype="multipart/form-data">
-    @csrf
-    <div class="w-full flex space-x-32">
-        <div class="w-1/2 flex flex-col justify-center items-center nunito- space-y-4 p-8 bg-[#D9D9D980] rounded-3xl">
-            <div class="w-full flex">
-                <div class="w-1/3 flex justify-start items-center">
-                    <img id="profileImage" src="{{ asset('build/assets/bg1.png') }}" class="w-48 h-48 rounded-full" onclick="triggerFileInput()">
-                    <input type="file" name="image" id="image" style="display:none;" onchange="previewImage(event)">
+{{-- Validation Errors --}}
+@if($errors->any())
+<div class="mx-16 mt-6 bg-red-50 border border-red-300 text-red-800 p-4 rounded-xl">
+    <p class="font-bold text-xl mb-2">Please fix the following errors:</p>
+    <ul class="list-disc list-inside space-y-1">
+        @foreach($errors->all() as $error)
+            <li class="text-lg">{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
+<div class="flex flex-col items-start justify-start w-full px-16 pb-16">
+
+    {{-- Header --}}
+    <div class="w-full flex items-center justify-between pt-6 pb-2">
+        <nav aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-2">
+                <li><a href="{{ route('employee.management') }}" class="text-2xl text-[#00000080] hover:text-[#184E77]">Employee</a></li>
+                <li><span class="text-[#00000080] text-2xl mx-1">›</span></li>
+                <li><a href="{{ route('employee.management') }}" class="text-2xl text-[#00000080] hover:text-[#184E77]">Employee Management</a></li>
+                <li><span class="text-[#00000080] text-2xl mx-1">›</span></li>
+                <li><span class="text-2xl text-[#184E77] font-semibold">Add New Employee</span></li>
+            </ol>
+        </nav>
+    </div>
+
+    {{-- Legend --}}
+    <div class="w-full flex items-center space-x-6 mb-6 mt-2">
+        <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+            <span class="text-lg text-gray-600">Required field</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-gray-400 inline-block"></span>
+            <span class="text-lg text-gray-600">Optional field</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ route('employees.store') }}" enctype="multipart/form-data" class="w-full space-y-8">
+        @csrf
+
+        {{-- SECTION 1: PROFILE & LEGAL DOCUMENTS --}}
+        <div class="w-full flex space-x-8">
+
+            {{-- Profile Card --}}
+            <div class="w-1/2 bg-[#D9D9D980] rounded-3xl p-8 space-y-6">
+                <h2 class="text-3xl font-bold text-black">Profile</h2>
+
+                <div class="flex items-center space-x-6">
+                    <div class="relative cursor-pointer" onclick="document.getElementById('image').click()">
+                        <img id="profileImage"
+                             src="{{ asset('build/assets/bg1.png') }}"
+                             class="w-32 h-32 rounded-full object-cover border-4 border-white shadow">
+                        <div class="absolute bottom-0 right-0 bg-[#184E77] text-white rounded-full p-1">
+                            <i class="ri-camera-line text-lg"></i>
+                        </div>
+                    </div>
+                    <input type="file" name="image" id="image" class="hidden" accept="image/*" onchange="previewImage(event)">
+                    <p class="text-lg text-gray-500">Click photo to change<br><span class="text-gray-400 text-base">JPG, PNG, BMP — max 4MB</span></p>
                 </div>
-                <div class="w-2/3 flex flex-col justify-center items-start space-y-4 nunito-">
-                <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
-                    <input type="text" id="first_name" name="first_name" placeholder="Enter First Name" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A] " required />
-                    <input type="text" id="last_name" name="last_name" placeholder="Enter Last Name" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A] " required />
-                    <input type="text" id="employee_id" name="employee_id" placeholder="Enter Employee ID" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A] " required />
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>First Name <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="text" name="first_name" value="{{ old('first_name') }}"
+                           placeholder="e.g. John"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Last Name <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="text" name="last_name" value="{{ old('last_name') }}"
+                           placeholder="e.g. Doe"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Employee ID <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="text" name="employee_id" value="{{ old('employee_id') }}"
+                           placeholder="e.g. EMP-001"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Description <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <textarea name="description" rows="3" placeholder="Short bio or notes..."
+                              class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]">{{ old('description') }}</textarea>
                 </div>
             </div>
-            <div class="w-full h-1/2">
-                <textarea id="description" name="description" placeholder="Enter Description" rows="2" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]"></textarea>
-            </div>  
-        </div>
 
-        <div class="w-1/2 flex flex-col justify-start items-start nunito- rounded-3xl">
-            <div class="w-full flex justify-between items-center bg-[#D9D9D980] px-4 pt-4 rounded-t-xl">
-                <p class="text-3xl font-bold text-black">Legal Documents</p>
-                <label for="doc-files" class="flex items-center justify-center px-4 py-2 bg-[#184E77] border-2 border-[#52B69A80] text-white rounded-md cursor-pointer hover:bg-blue-600 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"> 
-                    <span class="iconify" data-icon="ic:sharp-upload" style="width: 16px; height: 16px;"></span>
-                    <span class="ml-2">Upload Files</span>
-                </label>
-                <!-- Visible File Input -->
+            {{-- Legal Documents Card --}}
+            <div class="w-1/2 bg-[#D9D9D980] rounded-3xl p-8 space-y-4 flex flex-col">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-3xl font-bold text-black">Legal Documents</h2>
+                    <label for="doc-files" class="flex items-center px-4 py-2 bg-[#184E77] text-white text-lg rounded-xl cursor-pointer hover:bg-[#1B5A8A]">
+                        <i class="ri-upload-2-line mr-2"></i> Upload PDF
+                    </label>
+                </div>
+                <p class="text-base text-gray-500">PDF files only &mdash; <span class="text-gray-400">optional</span></p>
                 <input type="file" id="doc-files" accept="application/pdf" class="hidden" multiple />
-
-                <!-- Hidden File Input -->
                 <input type="file" name="legal_documents[]" id="hidden-files" class="hidden" multiple />
-            </div>
-
-            <div id="file-list" class="text-black text-sm w-full bg-[#D9D9D980] flex flex-col justify-end items-end rounded-b-xl pr-4 pt-4">
-                <p>Attached Files:</p>
-                <ul id="file-list-items"></ul>
+                <ul id="file-list-items" class="space-y-2 flex-1"></ul>
             </div>
         </div>
 
-    </div>
+        {{-- SECTION 2: PERSONAL INFORMATION --}}
+        <div class="bg-[#D9D9D980] rounded-3xl p-8">
+            <h2 class="text-3xl font-bold text-black mb-6">Personal Information</h2>
+            <div class="grid grid-cols-2 gap-6">
 
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-700 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                        <span>Full Name <span class="text-red-500">*</span></span>
+                    </label>
+                    <input type="text" name="full_name" value="{{ old('full_name') }}"
+                           placeholder="e.g. John Michael Doe" required
+                           class="w-full p-3 text-xl border-2 border-red-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-400 bg-red-50" />
+                </div>
 
-    <!-- Employment Information --> 
-    <div class="w-full flex space-x-16 pt-8">
-    <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl cursor-pointer nunito focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
-        <div class="w-full flex pl-8">
-            <p class="text-3xl font-bold text-black">Employment Information</p>
-        </div>
-        <div class="w-full flex">
-            <div class="w-1/2 flex flex-col pl-8 space-y-8 text-[#00000080]">
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <p class="text-xl">Job Title</p>
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Email Address <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="email" name="email" value="{{ old('email') }}"
+                           placeholder="e.g. john@example.com"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <p class="text-xl">Department</p>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>NIC <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="text" name="nic" value="{{ old('nic') }}"
+                           placeholder="e.g. 199012345678"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <p class="text-xl">Branch</p>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Phone Number <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="text" name="phone" value="{{ old('phone') }}"
+                           placeholder="e.g. +94 77 123 4567"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <p class="text-xl">Employment Type</p>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Gender <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <select name="gender" class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
+                        <option value="">— Select Gender —</option>
+                        <option value="male"   {{ old('gender') == 'male'   ? 'selected' : '' }}>Male</option>
+                        <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Female</option>
+                        <option value="other"  {{ old('gender') == 'other'  ? 'selected' : '' }}>Other</option>
+                    </select>
                 </div>
-                <div class="w-full flex space-x-8" @if($isFirstEmployee) style="display: none;" @endif>
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <p class="text-xl">Manager ID</p>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Date of Birth <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="date" name="date_of_birth" value="{{ old('date_of_birth') }}"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <p class="text-xl">Probation Period</p>
+
+                <div class="col-span-2 space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Living Address <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <textarea name="address" rows="2" placeholder="e.g. 123 Main St, Colombo"
+                              class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]">{{ old('address') }}</textarea>
                 </div>
+
             </div>
-            <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
-                <div class="w-full">
-                    <input type="text" name="title" placeholder="Enter Job Title" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+        </div>
+
+        {{-- SECTION 3: EMPLOYMENT INFORMATION --}}
+        <div class="bg-[#D9D9D980] rounded-3xl p-8">
+            <h2 class="text-3xl font-bold text-black mb-6">Employment Information</h2>
+            <div class="grid grid-cols-2 gap-6">
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Department <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <select name="name" class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
+                        <option value="">— Select Department —</option>
+                        @foreach($departments->unique('name') as $department)
+                            <option value="{{ $department->name }}" {{ old('name') == $department->name ? 'selected' : '' }}>
+                                {{ $department->name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
-                <div class="w-full">
-                <select name="name" id="name" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required>
-                    <option value="">Select Department</option>
-                    @foreach($departments->unique('name') as $department)
-                        <option value="{{ $department->name }}">{{ $department->name }}</option>
-                    @endforeach
-                </select>
-                </div>
-                <div class="w-full">
-                    <select name="branch" id="branch" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required>
-                        <option value="">Select Branch</option>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Branch <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <select name="branch" class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
+                        <option value="">— Select Branch —</option>
                         @foreach($departments->unique('branch') as $department)
-                        <option value="{{ $department->branch }}">{{ $department->branch }}</option>
-                    @endforeach
+                            <option value="{{ $department->branch }}" {{ old('branch') == $department->branch ? 'selected' : '' }}>
+                                {{ $department->branch }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
-                <div class="w-full">
-                    <select id="employment_type" name="employment_type" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
-                        <option value="" disabled selected>Select Employmet Type</option>
-                        <option value="full time">Full Time</option>
-                        <option value="part time">Part Time</option>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Job Title <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="text" name="title" value="{{ old('title') }}"
+                           placeholder="e.g. Software Engineer"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Employment Type <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <select name="employment_type" class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
+                        <option value="">— Select Type —</option>
+                        <option value="full time"  {{ old('employment_type') == 'full time'  ? 'selected' : '' }}>Full Time</option>
+                        <option value="part time"  {{ old('employment_type') == 'part time'  ? 'selected' : '' }}>Part Time</option>
+                        <option value="contract"   {{ old('employment_type') == 'contract'   ? 'selected' : '' }}>Contract</option>
+                        <option value="internship" {{ old('employment_type') == 'internship' ? 'selected' : '' }}>Internship</option>
                     </select>
                 </div>
-                <div class="w-full mt-4" @if($isFirstEmployee) style="display: none;" @endif>
-                <select name="manager_id" id="manager_id" 
-                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" 
-                    @if($isFirstEmployee) disabled @endif>
-                    <option value="">Select Manager</option>
-                    @foreach($employees->unique('employee_id') as $employee)
-                        <option value="{{ $employee->id }}">{{ $employee->employee_id }} - {{ $employee->first_name }}</option>
-                    @endforeach
-                </select>
-            </div>
 
-                <div class="w-full">
-                    <input type="date" name="probation_start_date" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Status <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="text" name="status" value="{{ old('status') }}"
+                           placeholder="e.g. Active"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full">
-                    <input type="text" name="probation_period" placeholder="Enter Probation Period" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-            </div>
-    </div>
-    </div>
 
-            <!-- Personal Information --> 
-        <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
-        <div class="w-full flex pl-8">
-            <p class="text-3xl font-bold text-black">Personal Information</p>
-        </div>
-        <div class="w-full flex">
-            <div class="w-1/2 flex flex-col pl-8 space-y-8 text-[#00000080]">
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="full_name" class="text-xl">Full Name</label>
-                </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="nic" class="text-xl">NIC</label>
-                </div>
-                <div class="w-full flex space-x-8 ">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="email" class="text-xl">Email Address</label>
-                </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="phone" class="text-xl">Phone Number</label>
-                </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="gender" class="text-xl">Gender</label>
-                </div>
-                <div class="w-full flex space-x-8 ">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="date_of_birth" class="text-xl">Date of Birth</label>
-                </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="address" class="text-xl">Living Address</label>
-                </div>
-            </div>
-            <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
-                <div class="w-full">
-                    <input type="text" id="full_name" name="full_name" placeholder="Enter Full Name" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A] " required />
-                </div>
-                <div class="w-full">
-                    <input type="text" id="nic" name="nic" placeholder="Enter NIC" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <input type="email" id="email" name="email" placeholder="Enter Email Address" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <input type="text" id="phone" name="phone" placeholder="Enter Phone Number" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <select id="gender" name="gender" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
-                        <option value="" disabled selected>Select Gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
+                @if(!$isFirstEmployee)
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Manager <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <select name="manager_id" class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
+                        <option value="">— Select Manager —</option>
+                        @foreach($employees->unique('employee_id') as $emp)
+                            <option value="{{ $emp->id }}" {{ old('manager_id') == $emp->id ? 'selected' : '' }}>
+                                {{ $emp->employee_id }} — {{ $emp->first_name }} {{ $emp->last_name }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
-                <div class="w-full">
-                    <input type="date" id="date_of_birth" name="date_of_birth" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <textarea id="address" name="address" placeholder="Enter Living Address" rows="2" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]"></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
+                @endif
 
-    <!-- Education and Experience --> 
-    <div class="w-full flex space-x-16 pb-8 pt-8">
-        <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
-        <div class="w-full flex pl-8">
-            <p class="text-3xl font-bold text-black">Education and Experience</p>
-        </div>
-        <div class="w-full flex">
-            <div class="w-1/2 flex flex-col pl-8 space-y-8 text-[#00000080]">
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="degree" class="text-xl">Degree</label>
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Employment Start Date <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="date" name="employment_start_date" value="{{ old('employment_start_date') }}"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full flex space-x-8 pt-4">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="institution" class="text-xl">Institution</label>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Employment End Date <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="date" name="employment_end_date" value="{{ old('employment_end_date') }}"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="graduation_year" class="text-xl">Graduation Year</label>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Probation Start Date <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="date" name="probation_start_date" value="{{ old('probation_start_date') }}"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="work_experience" class="text-xl">Work Experience</label>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Probation Period (months) <span class="text-gray-400 font-normal text-base">(optional)</span></span>
+                    </label>
+                    <input type="number" name="probation_period" value="{{ old('probation_period') }}"
+                           placeholder="e.g. 3"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
+
             </div>
-            <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
-                <div class="w-full">
-                    <input type="text" id="degree" name="degree" placeholder="Enter Degree Course" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <input type="text" id="institution" name="institution" placeholder="Enter Institution" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <input type="number" id="graduation_year" name="graduation_year" placeholder="Enter Graduation Year" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full flex flex-col space-y-2">
-                    <input type="text" id="work_experience_years" name="work_experience_years" placeholder="Enter Years of Experience" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                    <input type="text" id="work_experience_role" name="work_experience_role" placeholder="Enter Role " class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                    <input type="text" id="work_experience_company" name="work_experience_company" placeholder="Enter Company " class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-            </div>
-        </div> 
         </div>
 
-            <!-- Training and Certification --> 
-            <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 mt-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
-        <div class="w-full flex pl-8">
-            <p class="text-3xl font-bold text-black">Training and Certification</p>
-        </div>
-        <div class="w-full flex">
-            <div class="w-1/2 flex flex-col pl-8 space-y-8 text-[#00000080]">
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="course_name" class="text-xl">Course Name</label>
+        {{-- SECTION 4: BANK DETAILS (all required) --}}
+        <div class="bg-[#D9D9D980] rounded-3xl p-8">
+            <h2 class="text-3xl font-bold text-black mb-2">Bank Details</h2>
+            <p class="text-lg text-red-500 mb-6">All bank fields are required.</p>
+            <div class="grid grid-cols-2 gap-6">
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-700 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                        <span>Account Holder Name <span class="text-red-500">*</span></span>
+                    </label>
+                    <input type="text" name="account_holder_name" value="{{ old('account_holder_name') }}"
+                           placeholder="e.g. John Doe" required
+                           class="w-full p-3 text-xl border-2 border-red-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-400 bg-red-50" />
                 </div>
-                <div class="w-full flex space-x-8 pt-4">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="training_provider" class="text-xl">Training Provider</label>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-700 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                        <span>Bank Name <span class="text-red-500">*</span></span>
+                    </label>
+                    <input type="text" name="bank_name" value="{{ old('bank_name') }}"
+                           placeholder="e.g. Commercial Bank" required
+                           class="w-full p-3 text-xl border-2 border-red-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-400 bg-red-50" />
                 </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="completion_date" class="text-xl">Completion Date</label>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-700 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                        <span>Account Number <span class="text-red-500">*</span></span>
+                    </label>
+                    <input type="text" name="account_no" value="{{ old('account_no') }}"
+                           placeholder="e.g. 1234567890" required
+                           class="w-full p-3 text-xl border-2 border-red-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-400 bg-red-50" />
                 </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="certification_status" class="text-xl">Certification Status</label>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-700 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                        <span>Branch Name <span class="text-red-500">*</span></span>
+                    </label>
+                    <input type="text" name="branch_name" value="{{ old('branch_name') }}"
+                           placeholder="e.g. Colombo 03" required
+                           class="w-full p-3 text-xl border-2 border-red-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-400 bg-red-50" />
                 </div>
+
             </div>
-            <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
-                <div class="w-full">
-                    <input type="text" id="course_name" name="course_name" placeholder="Enter Course Name" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+        </div>
+
+        {{-- SECTION 5: EDUCATION & EXPERIENCE (all optional) --}}
+        <div class="bg-[#D9D9D980] rounded-3xl p-8">
+            <h2 class="text-3xl font-bold text-black mb-2">Education & Experience</h2>
+            <p class="text-lg text-gray-500 mb-6">All fields in this section are optional.</p>
+            <div class="grid grid-cols-2 gap-6">
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Degree</span>
+                    </label>
+                    <input type="text" name="degree" value="{{ old('degree') }}"
+                           placeholder="e.g. Bachelor of Science"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full">
-                    <input type="text" id="training_provider" name="training_provider" placeholder="Enter Training Provider" class="w-full mt-4 p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Institution</span>
+                    </label>
+                    <input type="text" name="institution" value="{{ old('institution') }}"
+                           placeholder="e.g. University of Colombo"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full">
-                    <input type="date" id="completion_date" name="completion_date" class="w-full mt-2 p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Graduation Year</span>
+                    </label>
+                    <input type="number" name="graduation_year" value="{{ old('graduation_year') }}"
+                           placeholder="e.g. 2020" min="1950" max="2099"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
-                <div class="w-full">
-                    <select id="certification_status" name="certification_status" class="w-full mt-4 p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
-                        <option value="" disabled selected>Select Certification Status</option>
-                        <option value="merit">Merit</option>
-                        <option value="distinction">Distinction</option>
-                        <option value="pass">Pass</option>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Work Experience (years)</span>
+                    </label>
+                    <input type="text" name="work_experience_years" value="{{ old('work_experience_years') }}"
+                           placeholder="e.g. 3"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Work Experience Role</span>
+                    </label>
+                    <input type="text" name="work_experience_role" value="{{ old('work_experience_role') }}"
+                           placeholder="e.g. Junior Developer"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Work Experience Company</span>
+                    </label>
+                    <input type="text" name="work_experience_company" value="{{ old('work_experience_company') }}"
+                           placeholder="e.g. XYZ Solutions"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+            </div>
+        </div>
+
+        {{-- SECTION 6: TRAINING & CERTIFICATION (all optional) --}}
+        <div class="bg-[#D9D9D980] rounded-3xl p-8">
+            <h2 class="text-3xl font-bold text-black mb-2">Training & Certification</h2>
+            <p class="text-lg text-gray-500 mb-6">All fields in this section are optional.</p>
+            <div class="grid grid-cols-2 gap-6">
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Course Name</span>
+                    </label>
+                    <input type="text" name="course_name" value="{{ old('course_name') }}"
+                           placeholder="e.g. AWS Cloud Practitioner"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Training Provider</span>
+                    </label>
+                    <input type="text" name="training_provider" value="{{ old('training_provider') }}"
+                           placeholder="e.g. Amazon Web Services"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Completion Date</span>
+                    </label>
+                    <input type="date" name="completion_date" value="{{ old('completion_date') }}"
+                           class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-lg font-semibold text-gray-600 flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-400 inline-block"></span>
+                        <span>Certification Status</span>
+                    </label>
+                    <select name="certification_status" class="w-full p-3 text-xl border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
+                        <option value="">— Select Status —</option>
+                        <option value="merit"       {{ old('certification_status') == 'merit'       ? 'selected' : '' }}>Merit</option>
+                        <option value="distinction" {{ old('certification_status') == 'distinction' ? 'selected' : '' }}>Distinction</option>
+                        <option value="pass"        {{ old('certification_status') == 'pass'        ? 'selected' : '' }}>Pass</option>
                     </select>
                 </div>
-            </div>
-        </div>
-    </div>
-    </div>
-    </div>
 
-    <!-- Bank Details -->
-<div class="w-full flex space-x-16 pb-8 pt-8">
-    <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
-        <div class="w-full flex pl-8">
-            <p class="text-3xl font-bold text-black">Bank Details</p>
+            </div>
         </div>
-        <div class="w-full flex">
-            <div class="w-1/2 flex flex-col pl-8 space-y-8 text-[#00000080]">
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="account_holder_name" class="text-xl">Account Holder Name</label>
-                </div>
-                <div class="w-full flex space-x-8 pt-4">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="bank_name" class="text-xl">Bank Name</label>
-                </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="account_no" class="text-xl">Account No</label>
-                </div>
-                <div class="w-full flex space-x-8">
-                    <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                    <label for="branch_name" class="text-xl">Branch Name</label>
-                </div>
-            </div>
-            <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
-                <div class="w-full">
-                    <input type="text" id="account_holder_name" name="account_holder_name" placeholder="Enter Bank Holder Name" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <input type="text" id="bank_name" name="bank_name" placeholder="Enter Bank Name" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <input type="text" id="account_no" name="account_no" placeholder="Enter Account No" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-                <div class="w-full">
-                    <input type="text" id="branch_name" name="branch_name" placeholder="Enter Branch Name" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                </div>
-            </div>
-        </div> 
-    </div>
+
+        {{-- Save / Cancel --}}
+        <div class="flex items-center space-x-4 pb-8">
+            <button type="submit"
+                    class="flex items-center space-x-2 px-10 py-3 text-white text-2xl bg-gradient-to-r from-[#184E77] to-[#52B69A] rounded-xl shadow hover:from-[#1B5A8A] hover:to-[#60C3A8]">
+                <i class="ri-add-fill text-3xl"></i>
+                <span>Save Employee</span>
+            </button>
+            <a href="{{ route('employee.management') }}"
+               class="flex items-center space-x-2 px-8 py-3 text-[#184E77] text-2xl border-2 border-[#184E77] rounded-xl hover:bg-gray-100">
+                <i class="ri-close-line text-3xl"></i>
+                <span>Cancel</span>
+            </a>
+        </div>
+
+    </form>
 </div>
-
-<!-- Save Employee Button -->
-<div class="w-full flex justify-center pb-8 pt-8">
-    <button class="w-1/4 flex items-center justify-center space-x-2 px-6 py-2 text-white text-xl bg-gradient-to-r from-[#184E77] to-[#52B69A] rounded-xl shadow-sm hover:from-[#1B5A8A] hover:to-[#60C3A8]">
-        <p class="text-2xl"><i class="ri-add-fill"></i></p>
-        <span>Save Employee</span>
-    </button>
-</div>
-
-    </div>
-        </form>
 
 <script>
-  function toggleGradientText() {
-    const textElement = document.getElementById('payrollText');
-    if (textElement.classList.contains('text-black')) {
-      // Apply gradient
-      textElement.classList.remove('text-black');
-      textElement.classList.add('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
-    } else {
-      // Revert to black
-      textElement.classList.add('text-black');
-      textElement.classList.remove('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
-    }
-  }
-  
-    function toggleMenu(menuId) {
-        const menu = document.getElementById(menuId);
-        menu.classList.toggle('hidden');
-    }
-    const textElements = document.querySelectorAll('span.text-xl');
-
-    textElements.forEach((element) => {
-        element.addEventListener('click', function () {
-            // Reset all text elements to black
-            textElements.forEach((el) => {
-                el.classList.remove('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
-                el.classList.add('text-black');
-            });
-
-            // Apply gradient to the clicked element
-            this.classList.remove('text-black');
-            this.classList.add('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
-        });
-    });
-    // Trigger the file input when the image is clicked
-    let selectedFiles = new DataTransfer();
-
-    function handleFileSelection(input) {
-        const files = Array.from(input.files);
-        const fileListDisplay = document.getElementById('file-list-items');
-        const hiddenInput = document.getElementById('hidden-files');
-
-        files.forEach((file) => {
-            selectedFiles.items.add(file);
-
-            const listItem = document.createElement('li');
-            listItem.textContent = file.name;
-
-            const removeButton = document.createElement('span');
-            removeButton.textContent = ' ✖';
-            removeButton.style.color = 'red';
-            removeButton.style.cursor = 'pointer';
-            removeButton.style.marginLeft = '10px';
-            removeButton.onclick = function () {
-                removeFile(file.name);
-                listItem.remove();
-            };
-
-            listItem.appendChild(removeButton);
-            fileListDisplay.appendChild(listItem);
-        });
-
-        hiddenInput.files = selectedFiles.files;
-        input.value = ''; // Clear the visible input to allow re-upload
-    }
-
-    function removeFile(fileName) {
-        const newDataTransfer = new DataTransfer();
-        Array.from(selectedFiles.files).forEach((file) => {
-            if (file.name !== fileName) {
-                newDataTransfer.items.add(file);
-            }
-        });
-
-        selectedFiles = newDataTransfer;
-        document.getElementById('hidden-files').files = selectedFiles.files;
-    }
-
-    document.getElementById('doc-files').addEventListener('change', function () {
-        handleFileSelection(this);
-    });
-
-
-    function triggerFileInput() {
-        document.getElementById('image').click();
-    }
-
-    function previewImage(event) {
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
         const reader = new FileReader();
-        reader.onload = function() {
-            const output = document.getElementById('profileImage');
-            output.src = reader.result;  // Update the image preview
-        };
-        reader.readAsDataURL(event.target.files[0]);  // Convert image to data URL for preview
+        reader.onload = e => { document.getElementById('profileImage').src = e.target.result; };
+        reader.readAsDataURL(file);
     }
+}
 
+let selectedFiles = new DataTransfer();
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('doc-files').addEventListener('change', function () {
+        Array.from(this.files).forEach(file => {
+            if (Array.from(selectedFiles.files).some(f => f.name === file.name)) {
+                alert('"' + file.name + '" is already attached.');
+                return;
+            }
+            selectedFiles.items.add(file);
+            addFileToList(file.name);
+        });
+        syncHiddenInput();
+        this.value = '';
+    });
+});
+
+function addFileToList(fileName) {
+    const li = document.createElement('li');
+    li.className = 'flex items-center space-x-3 py-2 border-b border-gray-200';
+    li.id = 'file-' + fileName.replace(/[^a-z0-9]/gi, '_');
+    li.innerHTML =
+        '<i class="ri-file-pdf-2-fill text-red-500 text-2xl"></i>' +
+        '<span class="text-gray-700 text-lg flex-1">' + fileName + '</span>' +
+        '<button type="button" onclick="removeFile(\'' + fileName.replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-600 text-xl">&#10006;</button>';
+    document.getElementById('file-list-items').appendChild(li);
+}
+
+function removeFile(fileName) {
+    const dt = new DataTransfer();
+    Array.from(selectedFiles.files).forEach(f => { if (f.name !== fileName) dt.items.add(f); });
+    selectedFiles = dt;
+    const li = document.getElementById('file-' + fileName.replace(/[^a-z0-9]/gi, '_'));
+    if (li) li.remove();
+    syncHiddenInput();
+}
+
+function syncHiddenInput() {
+    document.getElementById('hidden-files').files = selectedFiles.files;
+}
 </script>
-  
+
 @endsection

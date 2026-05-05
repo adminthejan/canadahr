@@ -47,25 +47,26 @@ class EmployeeController extends Controller
      public function update(Request $request, $id)
      {
         $employee = Employee::findOrFail($id);
-        $education = Education::findOrFail($employee->education_id);
+        $education = $employee->education_id
+            ? Education::findOrFail($employee->education_id)
+            : new Education();
 
          $validated = $request->validate([
              'full_name' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
              'first_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
              'last_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
-             'email' => 'required|email|regex:/^[\w\.-]+@[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,6}$/|unique:employees,email,' . $id, 
+             'email' => 'nullable|email|regex:/^[\w\.-]+@[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,6}$/|unique:employees,email,' . $id, 
              'phone' => 'nullable|string|max:15',
              'address' => 'nullable|string',
              'date_of_birth' => 'nullable|date',
              'nic' => 'nullable|string',
              'gender' => 'nullable|string',
              'title' => 'nullable|string|regex:/^[a-zA-Z\s]+$/',
-             'employment_type' => 'nullable|string|regex:/^[a-zA-Z\s]+$/',
-             'image' => 'nullable|mimes:jpg,jpeg,png,bmp,tiff|max:4096',
+             'employment_type' => 'nullable|string|max:255',
              'employee_id' => 'nullable|string|max:255',
              'description' => 'nullable|string|max:255',
-             'branch' => 'required|string',
-             'name' => 'required|string',
+             'branch' => 'nullable|string',
+             'name' => 'nullable|string',
              'probation_start_date' => 'nullable|date',
              'probation_period' => 'nullable|integer|min:1',
              'department_id' => 'nullable|exists:departments,id',
@@ -162,14 +163,22 @@ class EmployeeController extends Controller
          $education->completion_date = $validated['completion_date'];
          $education->certification_status = $validated['certification_status'] ?? null;
          $education->save();
+
+         // Link the new education record to the employee if it was just created
+         if (!$employee->education_id) {
+             $employee->education_id = $education->id;
+         }
      
          // Find the department
-         $department = Department::where('name', $validated['name'])
-             ->where('branch', $validated['branch'])
-             ->first();
-     
-         if (!$department) {
-             return redirect()->back()->withErrors(['department_id' => 'Invalid department details provided.']);
+         $departmentId = null;
+         if (!empty($validated['name']) && !empty($validated['branch'])) {
+             $department = Department::where('name', $validated['name'])
+                 ->where('branch', $validated['branch'])
+                 ->first();
+             if (!$department) {
+                 return redirect()->back()->withErrors(['department_id' => 'Invalid department details provided.']);
+             }
+             $departmentId = $department->id;
          }
      
          // Update the employee record
@@ -189,7 +198,7 @@ class EmployeeController extends Controller
          $employee->description = $validated['description'] ?? null;
          $employee->probation_start_date = $validated['probation_start_date'] ?? null;
          $employee->probation_period = $validated['probation_period'] ?? null;
-         $employee->department_id = $department->id;
+         $employee->department_id = $departmentId;
          $employee->manager_id = $validated['manager_id'] ?? null;
          $employee->education_id = $education->id;
          $employee->employment_start_date = $validated['employment_start_date'] ?? null;
@@ -270,20 +279,19 @@ class EmployeeController extends Controller
         'full_name' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
         'first_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
         'last_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
-        'email' => 'required|email|regex:/^[\w\.-]+@[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,6}$/|unique:employees,email',
+        'email' => 'nullable|email|regex:/^[\w\.-]+@[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,6}$/|unique:employees,email',
         'phone' => 'nullable|string|max:15',
         'address' => 'nullable|string',
         'date_of_birth' => 'nullable|date',
         'nic' => 'nullable|string',
         'gender' => 'nullable|string',
         'title' => 'nullable|string|regex:/^[a-zA-Z\s]+$/',
-        'employment_type' => 'nullable|string|regex:/^[a-zA-Z\s]+$/',
-        'image' => 'nullable|mimes:jpg,jpeg,png,bmp,tiff|max:4096',
+        'employment_type' => 'nullable|string|max:255',
         'employee_id' => 'nullable|string|max:255',
         'description' => 'nullable|string|max:255',
-        'branch' => 'required|string',
-        'name' => 'required|string',
-        'probation_start_date' => 'required|date',
+        'branch' => 'nullable|string',
+        'name' => 'nullable|string',
+        'probation_start_date' => 'nullable|date',
         'probation_period' => 'nullable|integer',
         'department_id' => 'nullable|exists:departments,id',
         'manager_id' => $isFirstEmployee ? 'nullable' : 'nullable|exists:employees,id',
@@ -355,13 +363,16 @@ class EmployeeController extends Controller
     $education->save();
 
 
-   $department = Department::where('name', $validated['name'])
-        ->where('branch', $validated['branch'])
-        ->first();
-
-    if (!$department) {
-        return redirect()->back()->withErrors(['department_id' => 'Invalid department details provided.']);
-    }
+   $departmentId = null;
+   if (!empty($validated['name']) && !empty($validated['branch'])) {
+       $department = Department::where('name', $validated['name'])
+            ->where('branch', $validated['branch'])
+            ->first();
+       if (!$department) {
+           return redirect()->back()->withErrors(['department_id' => 'Invalid department details provided.']);
+       }
+       $departmentId = $department->id;
+   }
 
     // Create a new employee record
     $employee = new Employee();
@@ -386,7 +397,7 @@ class EmployeeController extends Controller
     $employee->description = $validated['description'] ?? null;
     $employee->probation_start_date = $validated['probation_start_date'] ?? null;
     $employee->probation_period = $validated['probation_period'] ?? null;
-    $employee->department_id = $department->id; 
+    $employee->department_id = $departmentId; 
     if ($isFirstEmployee) {
         $employee->manager_id = $employee->id; 
     } else {

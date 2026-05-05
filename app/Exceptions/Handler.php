@@ -48,7 +48,7 @@ class Handler extends ExceptionHandler
 
     public function render($request, Throwable $exception)
 {
-    if ($exception instanceof \ErrorException && str_contains($exception->getMessage(), 'Attempt to read property')) {
+    if (!config('app.debug') && $exception instanceof \ErrorException && str_contains($exception->getMessage(), 'Attempt to read property')) {
         return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
     }
 
