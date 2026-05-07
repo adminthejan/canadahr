@@ -164,7 +164,7 @@
 
 
 
-<form method="POST" action="{{ route('new-password.update') }}" enctype="multipart/form-data" >
+<form id="passwordForm" method="POST" action="{{ route('new-password.update') }}" enctype="multipart/form-data" >
   @csrf
   @method('PUT')
 
@@ -339,7 +339,7 @@ document.getElementById('toggle-password').addEventListener('click', function() 
 });
 
 // Prevent form submission if passwords don't meet requirements
-document.querySelector('form').addEventListener('submit', function(e) {
+document.getElementById('passwordForm').addEventListener('submit', function(e) {
     const newPassword = document.getElementById('new_password').value;
     if (newPassword.length < 8) {
         e.preventDefault();

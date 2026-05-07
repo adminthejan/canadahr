@@ -163,7 +163,7 @@
         <span class="iconify text-[#184E77]" data-icon="mdi:calendar-outline" style="font-size: 20px;"></span>
         <div>
           <span class="text-sm text-[#184E77]">Select a day</span>
-          <p id="selectedDate" class="text-lg font-bold">13.03.2021</p>
+          <p id="selectedDate" class="text-lg font-bold"></p>
         </div>
       </div>
       <span class="iconify text-black" data-icon="mdi:chevron-down"></span>
@@ -499,9 +499,10 @@
   });
   
   $('#resetCalendarButton').on('click', function () {
-    selectedDate.textContent = '13.03.2021'; // Reset displayed date
-    calendarInput._flatpickr.clear(); // Clear Flatpickr input
-    table.columns(3).search('').draw(); // Clear DataTable date filter
+    const today = new Date().toISOString().slice(0, 10);
+    selectedDate.textContent = today;
+    calendarInput._flatpickr.setDate(today, false);
+    table.search(today).draw();
   });
   //pagination controls
   table.on('draw', function () {
@@ -575,20 +576,23 @@
       const selectedDate = document.getElementById("selectedDate");
       const calendarButton = document.getElementById("calendarButton");
   
+      const todayStr = new Date().toISOString().slice(0, 10);
+      selectedDate.textContent = todayStr;
+
       flatpickr(calendarInput, {
           dateFormat: "Y-m-d",
+          defaultDate: todayStr,
           onChange: function (selectedDates, dateStr) {
               selectedDate.textContent = dateStr;
-              // Filter DataTable by selected date
               table.search(dateStr).draw();
           },
       });
-  
+
       calendarButton.addEventListener("click", () => {
           calendarInput._flatpickr.open();
       });
-  
-      table.draw('page');
+
+      table.search(todayStr).draw();
   });
   
   function openAddNewModal() {

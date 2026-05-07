@@ -248,8 +248,8 @@ if (!$attendance) {
          : 0;
      
      try {
-         $employee = Employee::where('employee_id', $request['employee_id'])->first();
-         
+         $employee = Employee::findOrFail($request['employee_id']);
+
          // Update the attendance record
          $isUpdated = $attendance->update([
              'employee_id' => $employee->id,
