@@ -99,14 +99,18 @@ class EmployeeController extends Controller
             if ($request->hasFile('image')) {
                 $img = $request->file('image');
                 $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $img->getClientOriginalName());
-                $imagePath = $img->storeAs('images', $safeName, 'public');
-
-                if ($imagePath === false) {
-                    return redirect()->back()->withErrors(['image' => 'Failed to upload image. Please check server storage permissions.']);
+                $dir = public_path('storage/images');
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0775, true);
                 }
+                $img->move($dir, $safeName);
+                $imagePath = 'images/' . $safeName;
 
                 if ($employee->image) {
-                    Storage::disk('public')->delete($employee->image);
+                    $oldPath = public_path('storage/' . $employee->image);
+                    if (file_exists($oldPath)) {
+                        unlink($oldPath);
+                    }
                 }
             }
 
@@ -124,18 +128,14 @@ class EmployeeController extends Controller
         // Handle new file uploads
         $newFiles = [];
         if ($request->hasFile('legal_documents')) {
+            $docDir = public_path('storage/legal-documents');
+            if (!is_dir($docDir)) {
+                mkdir($docDir, 0775, true);
+            }
             foreach ($request->file('legal_documents') as $file) {
-                try {
-                    $filePath = $file->storeAs(
-                        'legal-documents',
-                        time() . '_' . $file->getClientOriginalName(),
-                        'public'
-                    );
-                    $newFiles[] = $filePath;
-                } catch (\Exception $e) {
-                    \Log::error('File upload error: ' . $e->getMessage());
-                    return back()->withErrors(['file_upload' => 'Error uploading file: ' . $file->getClientOriginalName()]);
-                }
+                $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+                $file->move($docDir, $safeName);
+                $newFiles[] = 'legal-documents/' . $safeName;
             }
         }
 
@@ -328,18 +328,24 @@ class EmployeeController extends Controller
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $image->getClientOriginalName());
-            $imagePath = $image->storeAs('images', $safeName, 'public');
-            if ($imagePath === false) {
-                return redirect()->back()->withErrors(['image' => 'Failed to upload image. Please check server storage permissions.']);
+            $dir = public_path('storage/images');
+            if (!is_dir($dir)) {
+                mkdir($dir, 0775, true);
             }
+            $image->move($dir, $safeName);
+            $imagePath = 'images/' . $safeName;
         }
 
         $uploadedFiles = [];
         if ($request->hasFile('legal_documents')) {
+            $docDir = public_path('storage/legal-documents');
+            if (!is_dir($docDir)) {
+                mkdir($docDir, 0775, true);
+            }
             foreach ($request->file('legal_documents') as $file) {
                 $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
-                $filePath = $file->storeAs('legal-documents', $safeName, 'public');
-                $uploadedFiles[] = $filePath;
+                $file->move($docDir, $safeName);
+                $uploadedFiles[] = 'legal-documents/' . $safeName;
             }
         }
     } catch (\Exception $e) {

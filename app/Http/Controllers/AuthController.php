@@ -197,13 +197,21 @@ public function update(Request $request)
 
     // Check if the user provided a new profile image
     if ($request->hasFile('profile_image')) {
-        if ($user->profile_image && Storage::exists($user->profile_image)) {
-            Storage::delete($user->profile_image);
+        if ($user->profile_image) {
+            $oldPath = public_path('storage/' . $user->profile_image);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
         }
 
-        // Store new profile image
-        $profileImagePath = $request->file('profile_image')->store('profile-images', 'public');
-        $user->profile_image = $profileImagePath; 
+        $file = $request->file('profile_image');
+        $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+        $dir = public_path('storage/profile-images');
+        if (!is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+        $file->move($dir, $safeName);
+        $user->profile_image = 'profile-images/' . $safeName;
     }
 
     // Update the user's attributes only if they are present in the validated data
