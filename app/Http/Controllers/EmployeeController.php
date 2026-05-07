@@ -97,12 +97,14 @@ class EmployeeController extends Controller
             $imagePath = null;
 
             if ($request->hasFile('image')) {
-                // Store the new image and get its path
-                $imagePath = $request->file('image')->storeAs(
-                    'images', time() . '_' . $request->file('image')->getClientOriginalName(), 'public'
-                );
-        
-                // Delete the old image from storage if it exists
+                $img = $request->file('image');
+                $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $img->getClientOriginalName());
+                $imagePath = $img->storeAs('images', $safeName, 'public');
+
+                if ($imagePath === false) {
+                    return redirect()->back()->withErrors(['image' => 'Failed to upload image. Please check server storage permissions.']);
+                }
+
                 if ($employee->image) {
                     Storage::disk('public')->delete($employee->image);
                 }
@@ -325,21 +327,18 @@ class EmployeeController extends Controller
         $imagePath = null;
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imagePath = $image->storeAs(
-                'images',  
-                time() . '_' . $image->getClientOriginalName(),
-                'public'
-            );
+            $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $image->getClientOriginalName());
+            $imagePath = $image->storeAs('images', $safeName, 'public');
+            if ($imagePath === false) {
+                return redirect()->back()->withErrors(['image' => 'Failed to upload image. Please check server storage permissions.']);
+            }
         }
 
         $uploadedFiles = [];
         if ($request->hasFile('legal_documents')) {
             foreach ($request->file('legal_documents') as $file) {
-                $filePath = $file->storeAs(
-                    'legal-documents',
-                    time() . '_' . $file->getClientOriginalName(),
-                    'public'
-                );
+                $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+                $filePath = $file->storeAs('legal-documents', $safeName, 'public');
                 $uploadedFiles[] = $filePath;
             }
         }
