@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="./assetes/css/root.css">
+  @vite(['resources/css/root.css', 'resources/js/app.js'])
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="icon" href="{{ asset('browser_icon.png') }}" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.css" integrity="sha512-6p+GTq7fjTHD/sdFPWHaFoALKeWOU9f9MPBoPnvJEWBkGS4PKVVbCpMps6IXnTiXghFbxlgDE8QRHc3MU91lJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <title>@yield('title', 'App')</title>
-    @vite(['resources/js/app.js'])
  
 </head>
         @yield('content') <!-- Content placeholder -->

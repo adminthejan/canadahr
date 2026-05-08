@@ -25,7 +25,7 @@
           <!-- Employee ID -->
           <!-- Claim Date -->
           <div>
-            <label for="employee_id" class="block text-xl text-black font-bold">Employee ID :</label>
+            <label for="employee_id" class="block text-xl text-black font-bold">Employee ID <span class="text-red-600">*</span>:</label>
             <input
               type="text"
               id="employee_id"
@@ -37,7 +37,7 @@
 
           <!-- Amount -->
           <div>
-            <label for="clock_in_time" class="block text-xl text-black font-bold">Check In Time</label>
+            <label for="clock_in_time" class="block text-xl text-black font-bold">Check In Time <span class="text-red-600">*</span></label>
             <input
               type="time"
               id="clock_in_time"
@@ -49,7 +49,7 @@
 
           <!-- Status -->
           <div>
-            <label for="clock_out_time" class="block text-xl text-black font-bold">Check Out Time</label>
+            <label for="clock_out_time" class="block text-xl text-black font-bold">Check Out Time <span class="text-red-600">*</span></label>
             <input
               type="time"
               id="clock_out_time"
@@ -62,7 +62,7 @@
           <!-- Approved By -->
 <!-- Total Work Hours -->
 <div>
-    <label for="total_work_hours" class="block text-xl text-black font-bold">Total Work Hours</label>
+    <label for="total_work_hours" class="block text-xl text-black font-bold">Total Work Hours <span class="text-red-600">*</span></label>
     <input
         type="text"
         id="total_work_hours"
@@ -74,7 +74,7 @@
 
 <!-- Overtime Hours -->
 <div>
-    <label for="overtime_hours" class="block text-xl text-black font-bold">O/T Hours</label>
+    <label for="overtime_hours" class="block text-xl text-black font-bold">O/T Hours <span class="text-red-600">*</span></label>
     <input
         type="text"
         id="overtime_hours"
@@ -86,7 +86,7 @@
 
 <!-- Late By -->
 <div>
-    <label for="late_by" class="block text-xl text-black font-bold">Late By</label>
+    <label for="late_by" class="block text-xl text-black font-bold">Late By <span class="text-red-600">*</span></label>
     <input
         type="text"
         id="late_by"
@@ -98,7 +98,7 @@
 
 
           <div>
-            <label for="date" class="block text-xl text-black font-bold">Date :</label>
+            <label for="date" class="block text-xl text-black font-bold">Date <span class="text-red-600">*</span>:</label>
             <input
               type="date"
               id="date"
