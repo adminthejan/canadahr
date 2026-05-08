@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
-  @vite(['resources/css/root.css', 'resources/js/app.js'])
+  <link rel="stylesheet" href="./assetes/css/root.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <script src="https://unpkg.com/alpinejs" defer></script>
 
@@ -36,7 +36,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.css" integrity="sha512-6p+GTq7fjTHD/sdFPWHaFoALKeWOU9f9MPBoPnvJEWBkGS4PKVVbCpMps6IXnTiXghFbxlgDE8QRHc3MU91lJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <title>@yield('title', 'Dashboard')</title>
 
-    
+    @vite(['resources/js/app.js'])
 </head>
 <body class="bg-gray-100">
 
