@@ -83,13 +83,10 @@ public function store(Request $request)
     // Handle manual form submission (non-JSON / web form)
     if (!$request->isJson() && !$request->wantsJson()) {
         $request->validate([
-            'employee_id'      => 'required|string',
-            'date'             => 'required|date',
-            'clock_in_time'    => 'nullable',
-            'clock_out_time'   => 'nullable',
-            'total_work_hours' => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
-            'overtime_hours'   => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
-            'late_by'          => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
+            'employee_id'   => 'required|string',
+            'date'          => 'required|date',
+            'clock_in_time' => 'required',
+            'clock_out_time'=> 'nullable',
         ]);
 
         try {
@@ -99,17 +96,47 @@ public function store(Request $request)
                 return redirect()->route('attendance.management')->with('error', 'Employee not found with ID: ' . $request->employee_id);
             }
 
-            $totalWorkSeconds = $this->convertToSeconds($request->total_work_hours);
-            $overtimeSeconds  = $this->convertToSeconds($request->overtime_hours);
-            $lateBySeconds    = $this->convertToSeconds($request->late_by);
+            $attDate    = $request->date;
+            $clockIn    = Carbon::parse($attDate . ' ' . $request->clock_in_time);
+            $lateThreshold = Carbon::parse($attDate . ' 08:45:00');
+            $eightThirty   = Carbon::parse($attDate . ' 07:30:00');
+            $tenAM         = Carbon::parse($attDate . ' 10:00:00');
+
+            // Late by seconds
+            $lateBySeconds = $clockIn->greaterThan($lateThreshold)
+                ? $clockIn->diffInSeconds($lateThreshold)
+                : 0;
+
+            $totalWorkSeconds = 0;
+            $overtimeSeconds  = 0;
+
+            if ($request->clock_out_time) {
+                $clockOut = Carbon::parse($attDate . ' ' . $request->clock_out_time);
+
+                // If clock-out is before clock-in (overnight shift)
+                if ($clockOut->lessThan($clockIn)) {
+                    $clockOut->addDay();
+                }
+
+                if ($clockIn->greaterThanOrEqualTo($tenAM)) {
+                    $workStart   = $clockIn->copy();
+                    $otThreshold = 4 * 3600;
+                } else {
+                    $workStart   = $clockIn->lessThan($eightThirty) ? $eightThirty->copy() : $clockIn->copy();
+                    $otThreshold = 8 * 3600;
+                }
+
+                $totalWorkSeconds = $workStart->diffInSeconds($clockOut);
+                $overtimeSeconds  = $totalWorkSeconds > $otThreshold ? $totalWorkSeconds - $otThreshold : 0;
+            }
 
             Attendance::create([
                 'employee_id'      => $employee->id,
-                'date'             => $request->date,
+                'date'             => $attDate,
                 'clock_in_time'    => $request->clock_in_time,
-                'clock_out_time'   => $request->clock_out_time,
-                'total_work_hours' => $totalWorkSeconds,
-                'overtime_seconds' => $overtimeSeconds,
+                'clock_out_time'   => $request->clock_out_time ?: null,
+                'total_work_hours' => $totalWorkSeconds ?: null,
+                'overtime_seconds' => $overtimeSeconds ?: null,
                 'late_by_seconds'  => $lateBySeconds,
                 'status'           => 'present',
             ]);

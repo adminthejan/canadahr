@@ -59,44 +59,7 @@
             />
           </div>
 
-          <!-- Approved By -->
-<!-- Total Work Hours -->
-<div>
-    <label for="total_work_hours" class="block text-xl text-black font-bold">Total Work Hours</label>
-    <input
-        type="text"
-        id="total_work_hours"
-        name="total_work_hours"
-        placeholder="HH:MM:SS"
-        class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-    />
-</div>
-
-<!-- Overtime Hours -->
-<div>
-    <label for="overtime_hours" class="block text-xl text-black font-bold">O/T Hours</label>
-    <input
-        type="text"
-        id="overtime_hours"
-        name="overtime_hours"
-        placeholder="HH:MM:SS"
-        class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-    />
-</div>
-
-<!-- Late By -->
-<div>
-    <label for="late_by" class="block text-xl text-black font-bold">Late By</label>
-    <input
-        type="text"
-        id="late_by"
-        name="late_by"
-        placeholder="HH:MM:SS"
-        class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-    />
-</div>
-
-
+          <!-- Date -->
           <div>
             <label for="date" class="block text-xl text-black font-bold">Date :</label>
             <input
