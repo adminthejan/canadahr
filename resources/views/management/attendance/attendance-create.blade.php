@@ -132,8 +132,11 @@
   }
 </style>
 <script>
-  // Close button functionality
-  document.getElementById('close-button').addEventListener('click', function () {
-    document.getElementById('modal-container').style.display = 'none';
-  });
+  // Close button functionality (button is optional/commented out)
+  const closeBtn = document.getElementById('close-button');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function () {
+      document.getElementById('modal-container').style.display = 'none';
+    });
+  }
 </script>

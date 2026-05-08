@@ -80,6 +80,48 @@ class AttendanceController extends Controller
 
 public function store(Request $request)
 {
+    // Handle manual form submission (non-JSON / web form)
+    if (!$request->isJson() && !$request->wantsJson()) {
+        $request->validate([
+            'employee_id'      => 'required|string',
+            'date'             => 'required|date',
+            'clock_in_time'    => 'nullable',
+            'clock_out_time'   => 'nullable',
+            'total_work_hours' => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
+            'overtime_hours'   => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
+            'late_by'          => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
+        ]);
+
+        try {
+            $employee = Employee::where('employee_id', $request->employee_id)->first();
+
+            if (!$employee) {
+                return redirect()->route('attendance.management')->with('error', 'Employee not found with ID: ' . $request->employee_id);
+            }
+
+            $totalWorkSeconds = $this->convertToSeconds($request->total_work_hours);
+            $overtimeSeconds  = $this->convertToSeconds($request->overtime_hours);
+            $lateBySeconds    = $this->convertToSeconds($request->late_by);
+
+            Attendance::create([
+                'employee_id'      => $employee->id,
+                'date'             => $request->date,
+                'clock_in_time'    => $request->clock_in_time,
+                'clock_out_time'   => $request->clock_out_time,
+                'total_work_hours' => $totalWorkSeconds,
+                'overtime_seconds' => $overtimeSeconds,
+                'late_by_seconds'  => $lateBySeconds,
+                'status'           => 'present',
+            ]);
+
+            return redirect()->route('attendance.management')->with('success', 'Attendance record added successfully!');
+        } catch (\Exception $e) {
+            \Log::error('Manual attendance store error: ' . $e->getMessage());
+            return redirect()->route('attendance.management')->with('error', 'Failed to add attendance record: ' . $e->getMessage());
+        }
+    }
+
+    // Handle API / hardware device JSON payload
     $data = $request->json()->all();
 
     file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT).' request received end' . PHP_EOL, FILE_APPEND);
