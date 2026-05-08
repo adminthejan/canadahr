@@ -411,17 +411,14 @@
       const menu = document.getElementById(menuId);
       menu.classList.toggle('hidden');
     }
-    const textElements = document.querySelectorAll('span.text-xl');
-  
-  textElements.forEach((element) => {
+    const attendanceTextElements = document.querySelectorAll('span.text-xl');
+
+  attendanceTextElements.forEach((element) => {
       element.addEventListener('click', function () {
-          // Reset all text elements to black
-          textElements.forEach((el) => {
+          attendanceTextElements.forEach((el) => {
               el.classList.remove('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
               el.classList.add('text-black');
           });
-  
-          // Apply gradient to the clicked element
           this.classList.remove('text-black');
           this.classList.add('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
       });

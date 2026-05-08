@@ -80,6 +80,46 @@ class AttendanceController extends Controller
 
 public function store(Request $request)
 {
+    // Manual form submission from the web UI
+    if (!$request->isJson()) {
+        $request->validate([
+            'employee_id' => 'required',
+            'date' => 'required|date',
+            'total_work_hours' => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
+            'overtime_hours' => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
+            'late_by' => ['nullable', 'regex:/^([0-9]+):([0-5][0-9]):([0-5][0-9])$/'],
+        ]);
+
+        $totalWorkSeconds = $this->convertToSeconds($request->input('total_work_hours'));
+        $overtimeSeconds = $this->convertToSeconds($request->input('overtime_hours'));
+        $lateBySeconds = $this->convertToSeconds($request->input('late_by'));
+
+        try {
+            $employee = Employee::where('employee_id', $request->input('employee_id'))->first();
+
+            if (!$employee) {
+                return redirect()->route('attendance.management')->with('error', 'Employee not found with the given ID.');
+            }
+
+            Attendance::create([
+                'employee_id' => $employee->id,
+                'date' => $request->input('date'),
+                'clock_in_time' => $request->input('clock_in_time'),
+                'clock_out_time' => $request->input('clock_out_time'),
+                'total_work_hours' => $totalWorkSeconds,
+                'overtime_seconds' => $overtimeSeconds,
+                'late_by_seconds' => $lateBySeconds,
+                'status' => 'present',
+            ]);
+
+            return redirect()->route('attendance.management')->with('success', 'Attendance record added successfully!');
+        } catch (\Exception $e) {
+            \Log::error('Attendance store error: ' . $e->getMessage());
+            return redirect()->route('attendance.management')->with('error', 'Failed to add attendance record: ' . $e->getMessage());
+        }
+    }
+
+    // External device — JSON payload
     $data = $request->json()->all();
 
     file_put_contents(storage_path('logs/attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT).' request received end' . PHP_EOL, FILE_APPEND);
@@ -110,96 +150,92 @@ public function store(Request $request)
 
         [$attDate, $attClockTime] = explode(' ', $attTime);
         $attTimeCarbon = Carbon::parse($attTime);
-$attendance = Attendance::where('employee_id', $employeeId)
-    ->where('date', $attDate)
-    ->first();
 
-// Try to find yesterday’s record with missing clock out
-if (!$attendance) {
-    $prevDate = Carbon::parse($attDate)->subDay()->toDateString();
-
-    $attendance = Attendance::where('employee_id', $employeeId)
-        ->where('date', $prevDate)
-        ->whereNull('clock_out_time')
-        ->first();
-}
-
-if (!$attendance) {
-    // First punch – treat as clock-in
-    $lateThreshold = Carbon::parse($attDate . ' 08:45:00');
-    $leaveThreshold = Carbon::parse($attDate . ' 09:15:00');
-
-    $lateBySeconds = $attTimeCarbon->greaterThan($lateThreshold)
-        ? $attTimeCarbon->diffInSeconds($lateThreshold)
-        : 0;
-
-    if ($attTimeCarbon->greaterThan($leaveThreshold)) {
-        $existingLeave = Leave::where('employee_id', $employee->id)
-            ->where('leave_type', 'late')
-            ->whereDate('start_date', $attDate)
+        $attendance = Attendance::where('employee_id', $employeeId)
+            ->where('date', $attDate)
             ->first();
 
-        if (!$existingLeave) {
-            Leave::create([
-                'employee_id' => $employee->id,
-                'employee_name' => $employee->full_name,
-                'employment_ID' => $employee->employee_id,
-                'leave_type' => 'late',
-                'approved_person' => 'System Auto',
-                'start_date' => $attDate,
-                'end_date' => $attDate,
-                'duration' => 1,
-                'status' => 'approved',
-                'description' => 'Auto-marked late for arriving after 9:15 AM',
-                'supporting_documents' => null,
+        if (!$attendance) {
+            $prevDate = Carbon::parse($attDate)->subDay()->toDateString();
+            $attendance = Attendance::where('employee_id', $employeeId)
+                ->where('date', $prevDate)
+                ->whereNull('clock_out_time')
+                ->first();
+        }
+
+        if (!$attendance) {
+            $lateThreshold = Carbon::parse($attDate . ' 08:45:00');
+            $leaveThreshold = Carbon::parse($attDate . ' 09:15:00');
+
+            $lateBySeconds = $attTimeCarbon->greaterThan($lateThreshold)
+                ? $attTimeCarbon->diffInSeconds($lateThreshold)
+                : 0;
+
+            if ($attTimeCarbon->greaterThan($leaveThreshold)) {
+                $existingLeave = Leave::where('employee_id', $employee->id)
+                    ->where('leave_type', 'late')
+                    ->whereDate('start_date', $attDate)
+                    ->first();
+
+                if (!$existingLeave) {
+                    Leave::create([
+                        'employee_id' => $employee->id,
+                        'employee_name' => $employee->full_name,
+                        'employment_ID' => $employee->employee_id,
+                        'leave_type' => 'late',
+                        'approved_person' => 'System Auto',
+                        'start_date' => $attDate,
+                        'end_date' => $attDate,
+                        'duration' => 1,
+                        'status' => 'approved',
+                        'description' => 'Auto-marked late for arriving after 9:15 AM',
+                        'supporting_documents' => null,
+                    ]);
+                }
+            }
+
+            Attendance::create([
+                'employee_id' => $employeeId,
+                'date' => $attDate,
+                'clock_in_time' => $attClockTime,
+                'clock_out_time' => null,
+                'status' => 'present',
+                'total_work_hours' => null,
+                'overtime_seconds' => null,
+                'late_by_seconds' => $lateBySeconds,
+            ]);
+        } else {
+            $clockIn = Carbon::parse($attendance->date . ' ' . $attendance->clock_in_time);
+            $clockOut = $attTimeCarbon->copy();
+
+            if ($clockOut->lessThan($clockIn)) {
+                $clockOut->addDay();
+            }
+
+            $eightThirty = Carbon::parse($attendance->date . ' 07:30:00');
+            $tenAM = Carbon::parse($attendance->date . ' 10:00:00');
+            $lateThreshold = Carbon::parse($attendance->date . ' 08:45:00');
+
+            if ($clockIn->greaterThanOrEqualTo($tenAM)) {
+                $workStart = $clockIn->copy();
+                $otThreshold = 4 * 3600;
+            } else {
+                $workStart = $clockIn->lessThan($eightThirty) ? $eightThirty->copy() : $clockIn->copy();
+                $otThreshold = 8 * 3600;
+            }
+
+            $totalWorkSeconds = $workStart->diffInSeconds($clockOut);
+            $overtimeSeconds = $totalWorkSeconds > $otThreshold ? $totalWorkSeconds - $otThreshold : 0;
+            $lateBySeconds = $clockIn->greaterThan($lateThreshold) ? $clockIn->diffInSeconds($lateThreshold) : 0;
+
+            $attendance->update([
+                'clock_out_time' => $clockOut->format('H:i:s'),
+                'status' => 'present',
+                'total_work_hours' => $totalWorkSeconds,
+                'overtime_seconds' => $overtimeSeconds,
+                'late_by_seconds' => $lateBySeconds,
             ]);
         }
-    }
-
-    Attendance::create([
-        'employee_id' => $employeeId,
-        'date' => $attDate,
-        'clock_in_time' => $attClockTime,
-        'clock_out_time' => null,
-        'status' => 'present',
-        'total_work_hours' => null,
-        'overtime_seconds' => null,
-        'late_by_seconds' => $lateBySeconds,
-    ]);
-} else {
-    // Treat this as clock-out (even for previous day)
-    $clockIn = Carbon::parse($attendance->date . ' ' . $attendance->clock_in_time);
-    $clockOut = $attTimeCarbon->copy();
-
-    if ($clockOut->lessThan($clockIn)) {
-        $clockOut->addDay();
-    }
-
-    $eightThirty = Carbon::parse($attendance->date . ' 07:30:00');
-    $tenAM = Carbon::parse($attendance->date . ' 10:00:00');
-    $lateThreshold = Carbon::parse($attendance->date . ' 08:45:00');
-
-    if ($clockIn->greaterThanOrEqualTo($tenAM)) {
-        $workStart = $clockIn->copy();
-        $otThreshold = 4 * 3600;
-    } else {
-        $workStart = $clockIn->lessThan($eightThirty) ? $eightThirty->copy() : $clockIn->copy();
-        $otThreshold = 8 * 3600;
-    }
-
-    $totalWorkSeconds = $workStart->diffInSeconds($clockOut);
-    $overtimeSeconds = $totalWorkSeconds > $otThreshold ? $totalWorkSeconds - $otThreshold : 0;
-    $lateBySeconds = $clockIn->greaterThan($lateThreshold) ? $clockIn->diffInSeconds($lateThreshold) : 0;
-
-    $attendance->update([
-        'clock_out_time' => $clockOut->format('H:i:s'),
-        'status' => 'present',
-        'total_work_hours' => $totalWorkSeconds,
-        'overtime_seconds' => $overtimeSeconds,
-        'late_by_seconds' => $lateBySeconds,
-    ]);
-}
-
     }
 
     file_put_contents(storage_path('logs/success_attendance_payload.log'), now() . ' - ' . json_encode($data, JSON_PRETTY_PRINT) . ' request successfully processed end' . PHP_EOL, FILE_APPEND);
