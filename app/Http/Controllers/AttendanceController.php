@@ -285,36 +285,51 @@ if (!$attendance) {
      // Validate input to ensure correct format
      $request->validate([
          'employee_id' => 'required|numeric',
-         'clock_in_time' => 'required',
-         'clock_out_time' => 'required',
+         'clock_in_time' => 'nullable',
+         'clock_out_time' => 'nullable',
          'date' => 'required|date',
      ]);
 
-     // Convert clock-in and clock-out times to Carbon instances
-     $clockInTime = Carbon::parse($request->input('clock_in_time'));
-     $clockOutTime = Carbon::parse($request->input('clock_out_time'));
+     $clockInInput = $request->input('clock_in_time');
+     $clockOutInput = $request->input('clock_out_time');
      
-     // Ensure valid clock-in and clock-out times
-     if ($clockInTime->greaterThanOrEqualTo($clockOutTime)) {
-         return redirect()->route('attendance.management')->with('error', 'Clock-out time must be after clock-in time.');
-     }
+     $clockInTime = $clockInInput ? Carbon::parse($clockInInput) : null;
+     $clockOutTime = $clockOutInput ? Carbon::parse($clockOutInput) : null;
+     
+     $totalWorkSeconds = $this->convertToSeconds($request->input('total_work_hours'));
+     $lateBySeconds = $this->convertToSeconds($request->input('late_by'));
+     $overtimeSeconds = $this->convertToSeconds($request->input('overtime_hours'));
+     
+     if ($clockInTime && $clockOutTime) {
+         // Ensure valid clock-in and clock-out times
+         if ($clockInTime->greaterThanOrEqualTo($clockOutTime)) {
+             return redirect()->route('attendance.management')->with('error', 'Clock-out time must be after clock-in time.');
+         }
 
-     // Calculate total work hours in seconds
-     $totalWorkSeconds = $clockInTime->diffInSeconds($clockOutTime);
+         // Calculate total work hours in seconds
+         $totalWorkSeconds = $clockInTime->diffInSeconds($clockOutTime);
+     }
+     
+     if ($clockInTime) {
+         // Define thresholds
+         $lateThreshold = Carbon::createFromTime(8, 45, 0); // 8:45 AM late threshold
+         
+         // Calculate late by seconds
+         $calculatedLateBy = $clockInTime->greaterThan($lateThreshold)
+             ? $clockInTime->diffInSeconds($lateThreshold)
+             : 0;
+         if ($calculatedLateBy > 0) {
+             $lateBySeconds = $calculatedLateBy;
+         }
+     }
      
      // Define thresholds
-     $lateThreshold = Carbon::createFromTime(8, 45, 0); // 8:45 AM late threshold
      $regularWorkSeconds = 8 * 3600; // 8 hours in seconds
      
-     // Calculate late by seconds
-     $lateBySeconds = $clockInTime->greaterThan($lateThreshold)
-         ? $clockInTime->diffInSeconds($lateThreshold)
-         : 0;
-
      // Calculate overtime seconds (only if total work exceeds 8 hours)
-     $overtimeSeconds = $totalWorkSeconds > $regularWorkSeconds
-         ? $totalWorkSeconds - $regularWorkSeconds
-         : 0;
+     if ($totalWorkSeconds > $regularWorkSeconds) {
+         $overtimeSeconds = $totalWorkSeconds - $regularWorkSeconds;
+     }
      
      try {
          $employee = Employee::findOrFail($request['employee_id']);
@@ -322,8 +337,8 @@ if (!$attendance) {
          // Update the attendance record
          $isUpdated = $attendance->update([
              'employee_id' => $employee->id,
-             'clock_in_time' => $request->input('clock_in_time'),
-             'clock_out_time' => $request->input('clock_out_time'),
+             'clock_in_time' => $clockInInput,
+             'clock_out_time' => $clockOutInput,
              'total_work_hours' => $totalWorkSeconds, // Total work in seconds
              'overtime_seconds' => $overtimeSeconds, // Overtime in seconds
              'late_by_seconds' => $lateBySeconds, // Late by in seconds
